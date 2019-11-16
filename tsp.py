@@ -14,7 +14,6 @@ def solve(method, filename, do_plot=False):
     elif method == "dynamic":
         # A lot of memory is needed
         (result, tour) = dynamic(points)
-        plot(points, tour)
 
     print(f"Lowest cost: {result}")
     print(f"Optimal tour: {tour}")
