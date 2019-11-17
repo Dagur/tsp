@@ -1,4 +1,5 @@
 from itertools import product
+from math import log
 
 import numpy
 
@@ -24,6 +25,24 @@ def flatten(tour):
     return (f(tour), flat_tour)
 
 
+def bits(n):
+    """
+    Get all 1 bits in a number
+    https://stackoverflow.com/questions/8898807/pythonic-way-to-iterate-over-bits-of-integer
+    """
+    while n:
+        b = n & (~n + 1)
+        yield b
+        n ^= b
+
+
+def index(node):
+    """
+    Get index in matrix from binary value. This could be memoized
+    """
+    return int(log(node, 2))
+
+
 def brute_force(points):
     """
     Try every possible path and return the lowest cost (Hameltonian cycle)
@@ -33,23 +52,24 @@ def brute_force(points):
     matrix = to_distance_matrix(graph)
     start_node = 0
     size = matrix[0].size
-    nodes = set(range(size))
+    nodes = (1 << size) - 1
 
-    def path(node, total, unvisited):
+    def path(node, total, visited):
         # Track where we are, what the total cost is and which nodes we
         # haven't visited yet
-        if not unvisited:
+        unvisited = nodes ^ visited
+        if unvisited == 0:
             # Complete the cycle back to start and return the total cost of
             # this path
-            return total + matrix[node][start_node], node
+            return (total + matrix[node][start_node], node)
 
         cost = min(
-            path(nnode, total + matrix[node][nnode], unvisited.difference([nnode]))
-            for nnode in unvisited
+            path(index(nnode), total + matrix[node][index(nnode)], (visited | nnode))
+            for nnode in bits(unvisited)
         )
-        return cost, node
+        return (cost, node)
 
-    tour = path(start_node, 0, nodes)
+    tour = path(start_node, 0, 0)
     return flatten(tour)
 
 
@@ -58,7 +78,7 @@ def dynamic_setup(matrix, size):
     """
     Create a memoized data structure for all subpaths
     """
-    memo = numpy.zeros((size, 2 ** size))
+    memo = numpy.zeros((size, 1 << size))
     for i in range(1, size):
         memo[i][1 | 1 << i] = matrix[0][i]
 
@@ -79,7 +99,7 @@ def combinations(set_bits, length):
     return lst
 
 
-def is_not(node, subset):
+def not_in(node, subset):
     """
     Is node not a member of subset
     """
@@ -94,10 +114,10 @@ def dynamic_solve(matrix, memo, size):
 
     for depth in range(3, size + 1):
         for subset in combinations(depth, size):
-            if is_not(start_node, subset):
+            if not_in(start_node, subset):
                 continue
             for next in range(size):
-                if next == start_node or is_not(next, subset):
+                if next == start_node or not_in(next, subset):
                     continue
                 state = subset ^ (1 << next)
                 min_dist = None
@@ -105,7 +125,7 @@ def dynamic_solve(matrix, memo, size):
                     if (
                         endpoint == start_node
                         or endpoint == next
-                        or is_not(endpoint, subset)
+                        or not_in(endpoint, subset)
                     ):
                         continue
                     new_dist = memo[endpoint][state] + matrix[endpoint][next]
@@ -142,7 +162,7 @@ def find_optimal_tour(matrix, memo, size):
     for i in range(size - 1, 0, -1):
         index = -1
         for j in range(1, size):
-            if is_not(j, state):
+            if not_in(j, state):
                 continue
             if index == -1:
                 index = j
