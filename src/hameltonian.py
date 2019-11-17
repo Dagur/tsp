@@ -73,7 +73,9 @@ def brute_force(points):
     return flatten(tour)
 
 
+############################
 # Dynamic programming method
+############################
 def dynamic_setup(matrix, size):
     """
     Create a memoized data structure for all subpaths
@@ -91,12 +93,11 @@ def combinations(set_bits, length):
 
     example: combinations(3, 4) returns (0111, 1110, 1011, 1101)
     """
-    lst = (
+    return (
         int("".join(str(x) for x in combo), 2)
         for combo in product([0, 1], repeat=length)
         if combo.count(1) == set_bits
     )
-    return lst
 
 
 def not_in(node, subset):
